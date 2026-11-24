@@ -847,6 +847,22 @@ const RESERVED = ['posts', 'tags', 'page'];
 /** A page's link record as templates read it. */
 const linkOf = (s) => (s === null ? null : { title: s.data.title, url: s.url, date: s.data.date ?? '', date_long: s.data.date === undefined ? '' : longDate(s.data.date) });
 
+/** Whether `target` opens with a scheme: a letter, then scheme characters, then a colon. */
+function startsWithScheme(target) {
+  if (target.length === 0) return false;
+  const first = target.charCodeAt(0);
+  const firstIsLetter = (first >= 65 && first <= 90) || (first >= 97 && first <= 122);
+  if (!firstIsLetter) return false;
+  for (let pos = 1; pos < target.length; pos++) {
+    const code = target.charCodeAt(pos);
+    if (code === 58) return true;
+    const isLetter = (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+    const isDigit = code >= 48 && code <= 57;
+    if (!isLetter && !isDigit && code !== 43 && code !== 45 && code !== 46) return false;
+  }
+  return false;
+}
+
 /** One site's output tree: path -> text. */
 export function run(input) {
   const slugCache = new Map();
@@ -932,15 +948,7 @@ export function run(input) {
       link: (target) => {
         const c0 = target.charCodeAt(0);
         if (c0 === 47 || c0 === 35) return target; // '/' or '#'
-        let scheme = false;
-        if ((c0 >= 65 && c0 <= 90) || (c0 >= 97 && c0 <= 122)) {
-          for (let i = 1; i < target.length; i++) {
-            const c = target.charCodeAt(i);
-            if (c === 58) { scheme = true; break; }
-            if (!((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || c === 43 || c === 45 || c === 46)) break;
-          }
-        }
-        if (scheme) return target;
+        if (startsWithScheme(target)) return target;
         const hash = target.indexOf('#');
         const rel = hash === -1 ? target : target.slice(0, hash);
         const frag = hash === -1 ? '' : target.slice(hash);
